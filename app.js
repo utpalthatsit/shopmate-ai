@@ -27,7 +27,26 @@ function escapeHtml(value = '') {
 
 function renderAuth(message = '') {
   shell.style.display = 'none';
-  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Connect your shop knowledge and let your assistant handle the first hello.</p><button class="primary-button" id="google-login"><span>G</span> Continue with Google</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<small>Powered by Supabase Auth</small></div></main>`);
+  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Sign in with any email address. We will send you a secure login link.</p><form id="email-login" class="email-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email"><button class="primary-button" type="submit">Send login link</button></form><div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<small>Powered by Supabase Auth</small></div></main>`);
+  document.querySelector('#email-login').addEventListener('submit', async event => {
+    event.preventDefault();
+    const email = document.querySelector('#login-email').value.trim();
+    const button = event.target.querySelector('button');
+    button.disabled = true;
+    button.textContent = 'Sending login link...';
+    const { error } = await window.shopmateSupabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/` } });
+    if (error) {
+      button.disabled = false;
+      button.textContent = 'Send login link';
+      const errorBox = document.querySelector('.auth-error') || document.createElement('div');
+      errorBox.className = 'auth-error';
+      errorBox.textContent = error.message;
+      document.querySelector('#email-login').after(errorBox);
+      return;
+    }
+    button.disabled = false;
+    button.textContent = 'Link sent - check your email';
+  });
   document.querySelector('#google-login').addEventListener('click', async () => {
     if (!configured()) {
       showToast('Add your Supabase URL and key in supabase.js first');
