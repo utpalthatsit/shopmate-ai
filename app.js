@@ -27,25 +27,48 @@ function escapeHtml(value = '') {
 
 function renderAuth(message = '') {
   shell.style.display = 'none';
-  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Sign in with any email address. We will send you a secure login link.</p><form id="email-login" class="email-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email"><button class="primary-button" type="submit">Send login link</button></form><div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<small>Powered by Supabase Auth</small></div></main>`);
-  document.querySelector('#email-login').addEventListener('submit', async event => {
+  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Create an account with your email and password, then confirm your email once.</p><form id="password-login" class="password-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email"><input id="login-password" type="password" placeholder="Password (6+ characters)" minlength="6" required autocomplete="current-password"><div class="password-actions"><button class="primary-button" id="login-submit" type="submit">Log in</button><button class="secondary-button" id="signup-submit" type="button">Create account</button></div></form>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button><small>Powered by Supabase Auth</small></div></main>`);
+  document.querySelector('#password-login').addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.querySelector('#login-email').value.trim();
+    const password = document.querySelector('#login-password').value;
     const button = event.target.querySelector('button');
     button.disabled = true;
-    button.textContent = 'Sending login link...';
-    const { error } = await window.shopmateSupabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/` } });
+    button.textContent = 'Logging in...';
+    const { error } = await window.shopmateSupabase.auth.signInWithPassword({ email, password });
     if (error) {
       button.disabled = false;
-      button.textContent = 'Send login link';
+      button.textContent = 'Log in';
       const errorBox = document.querySelector('.auth-error') || document.createElement('div');
       errorBox.className = 'auth-error';
       errorBox.textContent = error.message;
-      document.querySelector('#email-login').after(errorBox);
+      document.querySelector('#password-login').after(errorBox);
       return;
     }
+    window.location.reload();
+  });
+  document.querySelector('#signup-submit').addEventListener('click', async event => {
+    const email = document.querySelector('#login-email').value.trim();
+    const password = document.querySelector('#login-password').value;
+    if (!email || password.length < 6) {
+      showToast('Enter an email and a password with at least 6 characters');
+      return;
+    }
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.textContent = 'Creating account...';
+    const { data, error } = await window.shopmateSupabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/` } });
     button.disabled = false;
-    button.textContent = 'Link sent - check your email';
+    button.textContent = 'Create account';
+    if (error) {
+      const errorBox = document.querySelector('.auth-error') || document.createElement('div');
+      errorBox.className = 'auth-error';
+      errorBox.textContent = error.message;
+      document.querySelector('#password-login').after(errorBox);
+      return;
+    }
+    if (data.session) window.location.reload();
+    else showToast('Confirmation email sent. Confirm it, then log in with your password.');
   });
   document.querySelector('#google-login').addEventListener('click', async () => {
     if (!configured()) {
