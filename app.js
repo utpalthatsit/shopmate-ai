@@ -283,6 +283,7 @@ function confirmOrder(orderId, returnView = 'orders') {
   if (!order) return;
   order.status = 'Confirmed';
   saveDemo();
+  if ('BroadcastChannel' in window) new BroadcastChannel('shopmate-orders').postMessage({ type: 'order-updated', order });
   render(returnView);
   showToast(`${order.id} confirmed`);
 }
