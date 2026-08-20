@@ -298,6 +298,7 @@ function startDemo() {
   store.orders ||= [];
   store.invoices ||= [];
   store.demo = true;
+  saveDemo();
   document.querySelector('.auth-screen')?.remove();
   shell.style.display = 'flex';
   updateSidebar();

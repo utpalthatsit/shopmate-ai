@@ -7,8 +7,33 @@
   root.shadowRoot.innerHTML = `<style>:host{all:initial;font-family:Arial,sans-serif}.bubble{align-items:center;background:#18231f;border:0;border-radius:50%;bottom:24px;box-shadow:0 7px 22px #18231f44;color:#d8ef75;cursor:pointer;display:flex;font-size:23px;height:54px;justify-content:center;position:fixed;right:24px;width:54px;z-index:2147483647}.window{background:#fff;border:1px solid #e2e8e2;border-radius:14px;bottom:90px;box-shadow:0 16px 50px #18231f26;display:none;overflow:hidden;position:fixed;right:24px;width:320px;z-index:2147483647}.window.open{display:block}.head{align-items:center;background:#18231f;color:#fff;display:flex;gap:9px;padding:16px}.logo{background:#f18370;border-radius:50%;height:22px;width:22px}.head strong{font-size:12px}.head small{color:#b4c8ba;display:block;font-size:10px;margin-top:3px}.close{background:none;border:0;color:#fff;cursor:pointer;font-size:18px;margin-left:auto}.messages{background:#fbfcfa;height:275px;overflow:auto;padding:14px}.message{border-radius:8px;font-size:11px;line-height:1.45;margin:0 0 10px;max-width:84%;padding:9px 11px}.assistant{background:#e6f5e9;color:#294c37}.visitor{background:#18231f;color:#fff;margin-left:auto}.composer{border-top:1px solid #e5eae5;display:flex;gap:6px;padding:10px}.composer input{border:1px solid #e2e8e2;border-radius:6px;flex:1;font-size:11px;outline:0;padding:10px}.composer button{background:#18231f;border:0;border-radius:6px;color:#d8ef75;cursor:pointer;width:38px}</style><button class="bubble" aria-label="Open chat">✦</button><section class="window" aria-label="Chat with Maison Miro"><header class="head"><i class="logo"></i><div><strong>Maison Miro</strong><small>Usually replies instantly</small></div><button class="close" aria-label="Close chat">×</button></header><div class="messages"><div class="message assistant">Hi there! What can I help you find today?</div></div><form class="composer"><input aria-label="Message" placeholder="Ask about products, shipping..." autocomplete="off"><button aria-label="Send">↑</button></form></section>`;
   document.body.appendChild(root);
   const shadow = root.shadowRoot, bubble = shadow.querySelector('.bubble'), windowEl = shadow.querySelector('.window'), close = shadow.querySelector('.close'), messages = shadow.querySelector('.messages'), form = shadow.querySelector('form'), input = shadow.querySelector('input');
+  const demoData = () => { try { return JSON.parse(localStorage.getItem('shopmate-demo-data') || '{}'); } catch (_) { return {}; } };
+  const clean = value => String(value || '').replace(/[<>&]/g, '');
+  function answerQuestion(question) {
+    const query = question.toLowerCase();
+    const data = demoData();
+    const products = data.products || [];
+    const shop = data.shop || { name: 'Maison Miro', hours: 'Mon-Sat, 10:00-19:00', contact: '' };
+    const faqs = data.faqs || [];
+    const orders = data.orders || [];
+    const invoices = data.invoices || [];
+    if (/inventory|stock|items|products|kitne|quantity|available/.test(query)) {
+      const available = products.filter(item => item.in_stock !== false);
+      const totalUnits = products.reduce((sum, item) => sum + Number(item.stock_quantity || 0), 0);
+      return `We have ${products.length} product${products.length === 1 ? '' : 's'} in the catalog and ${available.length} currently in stock${totalUnits ? `, with ${totalUnits} units total` : ''}. ${products.slice(0, 4).map(item => `${item.name}: ${item.in_stock === false ? 'out of stock' : `${item.stock_quantity ?? 'available'} units`}`).join(' | ')}`;
+    }
+    const product = products.find(item => query.includes(String(item.name).toLowerCase()) || String(item.name).toLowerCase().split(' ').some(word => word.length > 3 && query.includes(word)));
+    if (product) return `${product.name} is ${product.in_stock === false ? 'currently out of stock' : 'available'}${product.price ? ` for ₹${Number(product.price).toLocaleString('en-IN')}` : ''}. ${product.description || ''}`;
+    if (/order|orders|booking|purchase/.test(query)) return orders.length ? `There ${orders.length === 1 ? 'is' : 'are'} ${orders.length} order${orders.length === 1 ? '' : 's'} in the system. ${orders.slice(0, 3).map(order => `${order.id} for ${order.customer}: ${order.status}`).join(' | ')}` : 'There are no orders yet.';
+    if (/invoice|billing|bill|gst|tax/.test(query)) return invoices.length ? `There ${invoices.length === 1 ? 'is' : 'are'} ${invoices.length} invoice${invoices.length === 1 ? '' : 's'}. GST is calculated at 18%.` : 'No invoices have been created yet. GST invoices can be generated from the Billing section.';
+    if (/hour|open|close|time|timing/.test(query)) return `Our shop hours are ${shop.hours || 'available on request'}.`;
+    const faq = faqs.find(item => query.includes(String(item.question).toLowerCase().split(' ')[0]));
+    if (faq) return faq.answer;
+    if (/contact|email|reach|phone/.test(query)) return shop.contact ? `You can contact us at ${shop.contact}.` : 'Please leave your email and our team will get back to you.';
+    return 'I can help with inventory, product prices, orders, GST invoices, shop hours, shipping, and contact details. What would you like to know?';
+  }
   bubble.addEventListener('click', () => { windowEl.classList.add('open'); bubble.style.display = 'none'; });
   close.addEventListener('click', () => { windowEl.classList.remove('open'); bubble.style.display = 'flex'; });
-  form.addEventListener('submit', event => { event.preventDefault(); const text = input.value.trim(); if (!text) return; messages.insertAdjacentHTML('beforeend', `<div class="message visitor">${text.replace(/[<>&]/g, '')}</div>`); input.value = ''; messages.scrollTop = messages.scrollHeight; setTimeout(() => { messages.insertAdjacentHTML('beforeend', `<div class="message assistant">Thanks for reaching out! I’ve noted your question and can help with products, availability, shipping, or studio hours.</div>`); messages.scrollTop = messages.scrollHeight; }, 500); });
+  form.addEventListener('submit', event => { event.preventDefault(); const text = input.value.trim(); if (!text) return; messages.insertAdjacentHTML('beforeend', `<div class="message visitor">${clean(text)}</div>`); input.value = ''; messages.scrollTop = messages.scrollHeight; setTimeout(() => { messages.insertAdjacentHTML('beforeend', `<div class="message assistant">${clean(answerQuestion(text))}</div>`); messages.scrollTop = messages.scrollHeight; }, 300); });
   root.dataset.shopId = shopId || '';
 })();
