@@ -27,7 +27,8 @@
     if (/order|orders|booking|purchase/.test(query)) return orders.length ? `There ${orders.length === 1 ? 'is' : 'are'} ${orders.length} order${orders.length === 1 ? '' : 's'} in the system. ${orders.slice(0, 3).map(order => `${order.id} for ${order.customer}: ${order.status}`).join(' | ')}` : 'There are no orders yet.';
     if (/invoice|billing|bill|gst|tax/.test(query)) return invoices.length ? `There ${invoices.length === 1 ? 'is' : 'are'} ${invoices.length} invoice${invoices.length === 1 ? '' : 's'}. GST is calculated at 18%.` : 'No invoices have been created yet. GST invoices can be generated from the Billing section.';
     if (/hour|open|close|time|timing/.test(query)) return `Our shop hours are ${shop.hours || 'available on request'}.`;
-    const faq = faqs.find(item => query.includes(String(item.question).toLowerCase().split(' ')[0]));
+    const faq = faqs.map(item => { const words = String(item.question).toLowerCase().split(/\W+/).filter(word => word.length > 3); return { item, score: words.filter(word => query.includes(word)).length }; }).sort((left, right) => right.score - left.score)[0];
+    if (faq?.score > 0) return faq.item.answer;
     if (faq) return faq.answer;
     if (/contact|email|reach|phone/.test(query)) return shop.contact ? `You can contact us at ${shop.contact}.` : 'Please leave your email and our team will get back to you.';
     return 'I can help with inventory, product prices, orders, GST invoices, shop hours, shipping, and contact details. What would you like to know?';

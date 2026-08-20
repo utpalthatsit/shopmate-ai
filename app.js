@@ -363,6 +363,17 @@ function startDemo() {
     if (product.stock_quantity == null) product.stock_quantity = product.in_stock === false ? 0 : 10;
     product.in_stock = Number(product.stock_quantity) > 0;
   });
+  if (store.demo) {
+    const trainingFaqs = [
+      { id: 'f-shipping', question: 'How long does shipping take?', answer: 'Standard shipping takes 3-5 business days. We will share tracking details after dispatch.' },
+      { id: 'f-returns', question: 'What is your return policy?', answer: 'You can request a return within 30 days. Items should be unused and in original packaging.' },
+      { id: 'f-pickup', question: 'Can I pick up my order from the studio?', answer: 'Yes, studio pickup is available Monday to Saturday during business hours.' },
+      { id: 'f-payment', question: 'What payment methods do you accept?', answer: 'We accept UPI, cards, and cash on pickup. Payment instructions are shared after order confirmation.' },
+      { id: 'f-gst', question: 'Do you provide a GST invoice?', answer: 'Yes, a GST invoice is generated after your order is confirmed.' }
+    ];
+    store.faqs ||= [];
+    trainingFaqs.forEach(faq => { if (!store.faqs.some(item => item.question === faq.question)) store.faqs.push(faq); });
+  }
   store.demo = true;
   saveDemo();
   document.querySelector('.auth-screen')?.remove();
