@@ -14,6 +14,21 @@ Open the local URL printed by `serve` to view the owner dashboard. The dashboard
 <script src="./widget.js" data-shop-id="maison-miro-84d2" defer></script>
 ```
 
-## Supabase integration points
+## Production setup
 
-The UI is ready to replace the local store with Supabase Auth, `shops`, `products`, `faqs`, `chat_sessions`, and `messages`. The embed snippet currently uses the future CDN URL and the chat response is intentionally simulated until an Edge Function and model provider are configured.
+1. Run the base tables and RLS policies from the Supabase SQL Editor.
+2. Run [schema.sql](schema.sql) to add stock quantities, orders, order items, invoices, and secure stock reduction.
+3. In Supabase Authentication, enable Email provider and keep Confirm email enabled.
+4. Configure a custom SMTP provider such as Resend under Project Settings -> Authentication -> SMTP Settings.
+5. Add `http://localhost:55467/` to Authentication -> URL Configuration while testing locally.
+6. Replace the demo `localStorage` flow in `shop.js` and `app.js` with Supabase reads/writes before public deployment.
+
+## What still needs your account access
+
+- Run `schema.sql` in your Supabase project.
+- Configure SMTP credentials without sharing them in chat.
+- Deploy the static files to Netlify, Vercel, or another HTTPS host.
+- Add an Edge Function for server-side order creation and the real AI provider key.
+- Add your Google OAuth credentials if Google login is required.
+
+The demo mode remains available for testing without email authentication. It uses localStorage intentionally and should not be used as the production data source.
