@@ -30,7 +30,7 @@ function escapeHtml(value = '') {
 
 function renderAuth(message = '') {
   shell.style.display = 'none';
-  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Create an account with your email and password, then confirm your email once.</p><form id="password-login" class="password-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="current-email"><input id="login-password" type="password" placeholder="Password (6+ characters)" minlength="6" required autocomplete="current-password"><div class="password-actions"><button class="primary-button" id="login-submit" type="submit">Log in</button><button class="secondary-button" id="signup-submit" type="button">Create account</button></div></form><button class="demo-button" id="demo-login" type="button">Try demo mode</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button><small>Powered by Supabase Auth</small></div></main>`);
+  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Create an account with your email and password, then confirm your email once.</p><form id="password-login" class="password-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email"><input id="login-password" type="password" placeholder="Password (6+ characters)" minlength="6" required autocomplete="current-password"><div class="password-actions"><button class="primary-button" id="login-submit" type="submit">Log in</button><button class="secondary-button" id="signup-submit" type="button">Create account</button></div></form><button class="forgot-button" id="forgot-password" type="button">Forgot password?</button><button class="demo-button" id="demo-login" type="button">Try demo mode</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button><small>Powered by Supabase Auth</small></div></main>`);
   document.querySelector('#demo-login').addEventListener('click', startDemo);
   document.querySelector('#password-login').addEventListener('submit', async event => {
     event.preventDefault();
@@ -73,6 +73,13 @@ function renderAuth(message = '') {
     }
     if (data.session) window.location.reload();
     else showToast('Confirmation email sent. Confirm it, then log in with your password.');
+  });
+  document.querySelector('#forgot-password').addEventListener('click', async () => {
+    const email = document.querySelector('#login-email').value.trim();
+    if (!email) return showToast('Enter your email first');
+    const { error } = await window.shopmateSupabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
+    if (error) return showToast(error.message);
+    showToast('Password reset email sent. Check your inbox.');
   });
   document.querySelector('#google-login').addEventListener('click', async () => {
     if (!configured()) {
