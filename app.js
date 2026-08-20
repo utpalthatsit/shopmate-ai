@@ -6,7 +6,8 @@ const store = {
   shop: null,
   products: [],
   faqs: [],
-  conversations: []
+  conversations: [],
+  demo: false
 };
 const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, embed: renderEmbed, settings: renderSettings };
 
@@ -27,7 +28,8 @@ function escapeHtml(value = '') {
 
 function renderAuth(message = '') {
   shell.style.display = 'none';
-  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Create an account with your email and password, then confirm your email once.</p><form id="password-login" class="password-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="email"><input id="login-password" type="password" placeholder="Password (6+ characters)" minlength="6" required autocomplete="current-password"><div class="password-actions"><button class="primary-button" id="login-submit" type="submit">Log in</button><button class="secondary-button" id="signup-submit" type="button">Create account</button></div></form>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button><small>Powered by Supabase Auth</small></div></main>`);
+  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Create an account with your email and password, then confirm your email once.</p><form id="password-login" class="password-login"><input id="login-email" type="email" placeholder="you@example.com" required autocomplete="current-email"><input id="login-password" type="password" placeholder="Password (6+ characters)" minlength="6" required autocomplete="current-password"><div class="password-actions"><button class="primary-button" id="login-submit" type="submit">Log in</button><button class="secondary-button" id="signup-submit" type="button">Create account</button></div></form><button class="demo-button" id="demo-login" type="button">Try demo mode</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<div class="auth-divider"><span>or</span></div><button class="secondary-button google-login" id="google-login"><span>G</span> Continue with Google</button><small>Powered by Supabase Auth</small></div></main>`);
+  document.querySelector('#demo-login').addEventListener('click', startDemo);
   document.querySelector('#password-login').addEventListener('submit', async event => {
     event.preventDefault();
     const email = document.querySelector('#login-email').value.trim();
@@ -171,6 +173,13 @@ async function addProduct() {
   if (!name) return;
   const description = prompt('Short description:') || '';
   const price = prompt('Price, for example 38:') || null;
+  if (store.demo) {
+    store.products.unshift({ id: crypto.randomUUID(), name, description, price: price ? Number(price) : null, in_stock: true });
+    localStorage.setItem('shopmate-demo-data', JSON.stringify(store));
+    render('knowledge');
+    showToast('Demo product saved locally');
+    return;
+  }
   const { error } = await window.shopmateSupabase.from('products').insert({ shop_id: store.shop.id, name, description, price: price ? Number(price) : null, in_stock: true });
   if (error) return showToast(error.message);
   await loadData(); render('knowledge'); showToast('Product saved');
@@ -180,6 +189,13 @@ async function addFaq() {
   const question = prompt('Customer question:');
   if (!question) return;
   const answer = prompt('Answer:') || '';
+  if (store.demo) {
+    store.faqs.unshift({ id: crypto.randomUUID(), question, answer });
+    localStorage.setItem('shopmate-demo-data', JSON.stringify(store));
+    render('knowledge');
+    showToast('Demo FAQ saved locally');
+    return;
+  }
   const { error } = await window.shopmateSupabase.from('faqs').insert({ shop_id: store.shop.id, question, answer });
   if (error) return showToast(error.message);
   await loadData(); render('knowledge'); showToast('FAQ saved');
@@ -195,11 +211,30 @@ function bindView(view) {
 
 async function saveSettings() {
   const payload = { name: document.querySelector('#shop-name').value.trim(), category: document.querySelector('#category').value.trim(), description: document.querySelector('#description').value.trim(), hours: document.querySelector('#hours').value.trim(), contact: document.querySelector('#contact').value.trim() };
+  if (store.demo) {
+    store.shop = { ...store.shop, ...payload };
+    localStorage.setItem('shopmate-demo-data', JSON.stringify(store));
+    updateSidebar();
+    showToast('Demo settings saved locally');
+    return;
+  }
   const { data, error } = await window.shopmateSupabase.from('shops').update(payload).eq('id', store.shop.id).select().single();
   if (error) return showToast(error.message);
   store.shop = data;
   updateSidebar();
   showToast('Settings saved to Supabase');
+}
+
+function startDemo() {
+  const saved = JSON.parse(localStorage.getItem('shopmate-demo-data') || 'null');
+  Object.assign(store, saved || { user: { email: 'demo@shopmate.ai', user_metadata: { full_name: 'Demo Owner' } }, shop: { id: 'demo-shop', name: 'Maison Miro', category: 'Home & living', description: 'Thoughtful objects for everyday rituals.', hours: 'Mon-Sat, 10:00-19:00', contact: 'hello@maisonmiro.com' }, products: [{ id: 'p1', name: 'Linen Table Runner', description: 'Natural flax, 180cm', price: 38, in_stock: true }], faqs: [{ id: 'f1', question: 'Do you ship internationally?', answer: 'Yes, we ship to 24 countries.' }], conversations: [], demo: true });
+  store.demo = true;
+  document.querySelector('.auth-screen')?.remove();
+  shell.style.display = 'flex';
+  updateSidebar();
+  render();
+  document.querySelector('.status-pill').innerHTML = '<i></i> Demo mode';
+  document.querySelector('.user-row .icon-button').addEventListener('click', () => window.location.reload());
 }
 
 async function start() {
