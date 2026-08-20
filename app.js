@@ -305,6 +305,12 @@ function startDemo() {
   render();
   document.querySelector('.status-pill').innerHTML = '<i></i> Demo mode';
   document.querySelector('.user-row .icon-button').addEventListener('click', () => window.location.reload());
+  if (!document.querySelector('#shopmate-widget-root')) {
+    const widgetScript = document.createElement('script');
+    widgetScript.src = './widget.js';
+    widgetScript.dataset.shopId = store.shop.id;
+    document.body.appendChild(widgetScript);
+  }
 }
 
 async function start() {
