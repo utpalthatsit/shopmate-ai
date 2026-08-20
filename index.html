@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shopmate AI assistant dashboard">
+  <title>Shopmate AI | Owner workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="Shopmate AI home"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a>
+      <div class="shop-switcher"><span class="shop-avatar">M</span><span><strong>Maison Miro</strong><small>Online shop</small></span><span class="chevron">⌄</span></div>
+      <nav class="main-nav" aria-label="Main navigation">
+        <p class="nav-label">Workspace</p>
+        <button class="nav-item active" data-view="overview"><span>◒</span>Overview</button>
+        <button class="nav-item" data-view="conversations"><span>▤</span>Conversations <b class="nav-count">12</b></button>
+        <button class="nav-item" data-view="knowledge"><span>⌘</span>Knowledge base</button>
+        <button class="nav-item" data-view="embed"><span>↗</span>Install widget</button>
+        <p class="nav-label nav-label-lower">Manage</p>
+        <button class="nav-item" data-view="settings"><span>⚙</span>Settings</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="upgrade-card"><span class="spark">✦</span><strong>Make every answer count</strong><p>Connect your live knowledge base to unlock AI-powered replies.</p><button class="text-button" data-view="knowledge">Add knowledge <span>→</span></button></div><div class="user-row"><span class="user-avatar">AK</span><span><strong>Amara K.</strong><small>Owner</small></span><button class="icon-button" title="Sign out" aria-label="Sign out">↪</button></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumbs"><span>Maison Miro</span><span>/</span><strong id="breadcrumb-title">Overview</strong></div><div class="topbar-actions"><span class="status-pill"><i></i> Assistant is live</span><button class="icon-button" title="Notifications" aria-label="Notifications">♢<em></em></button><button class="user-avatar small">AK</button></div></header>
+      <div id="view-container"></div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
