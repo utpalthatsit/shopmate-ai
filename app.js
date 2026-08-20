@@ -253,10 +253,18 @@ function createOrder() {
   if (!store.demo) return showToast('Orders need the Supabase orders table connection');
   const customer = prompt('Customer name:');
   if (!customer) return;
-  const item = prompt('Product or service:') || 'Custom order';
-  const amount = Number(prompt('Amount before GST:') || 0);
+  if (!store.products.length) return showToast('Add a product to Inventory first');
+  const itemName = prompt(`Product name (${store.products.map(product => `${product.name} - ${product.stock_quantity} available`).join(', ')}):`);
+  const product = store.products.find(item => item.name.toLowerCase() === String(itemName || '').trim().toLowerCase());
+  if (!product) return showToast('Product not found. Use the exact inventory product name.');
+  const available = Number(product.stock_quantity || 0);
+  const quantity = Math.max(1, Number(prompt(`Quantity (available: ${available}):`) || 1));
+  if (available < quantity || product.in_stock === false) return showToast(`Only ${available} units available`);
+  const amount = Number(product.price || 0) * quantity;
   const gst = amount * 0.18;
-  store.orders.unshift({ id: `ORD-${String(store.orders.length + 1).padStart(4, '0')}`, customer, item, total: amount + gst, status: 'Pending', date: new Date().toISOString() });
+  product.stock_quantity = available - quantity;
+  product.in_stock = product.stock_quantity > 0;
+  store.orders.unshift({ id: `ORD-${String(store.orders.length + 1).padStart(4, '0')}`, customer, item: `${product.name} x${quantity}`, product_id: product.id, quantity, subtotal: amount, total: amount + gst, status: 'Pending', date: new Date().toISOString() });
   saveDemo();
   render('orders');
   showToast('Order created in demo mode');
@@ -312,6 +320,10 @@ function startDemo() {
   Object.assign(store, saved || { user: { email: 'demo@shopmate.ai', user_metadata: { full_name: 'Demo Owner' } }, shop: { id: 'demo-shop', name: 'Maison Miro', category: 'Home & living', description: 'Thoughtful objects for everyday rituals.', hours: 'Mon-Sat, 10:00-19:00', contact: 'hello@maisonmiro.com' }, products: [{ id: 'p1', name: 'Linen Table Runner', description: 'Natural flax, 180cm', price: 38, stock_quantity: 12, in_stock: true }], faqs: [{ id: 'f1', question: 'Do you ship internationally?', answer: 'Yes, we ship to 24 countries.' }], conversations: [], orders: [], invoices: [], demo: true });
   store.orders ||= [];
   store.invoices ||= [];
+  store.products.forEach(product => {
+    if (product.stock_quantity == null) product.stock_quantity = product.in_stock === false ? 0 : 10;
+    product.in_stock = Number(product.stock_quantity) > 0;
+  });
   store.demo = true;
   saveDemo();
   document.querySelector('.auth-screen')?.remove();
