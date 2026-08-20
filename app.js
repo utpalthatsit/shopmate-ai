@@ -1,21 +1,167 @@
-const storeKey = 'shopmate-demo-state';
-const defaultState = { shop: { name: 'Maison Miro', category: 'Home & living', description: 'Thoughtful objects for everyday rituals.', hours: 'Mon–Sat, 10:00–19:00', contact: 'hello@maisonmiro.com' }, products: [{ name: 'Linen Table Runner', detail: 'Natural flax, 180cm', price: '$38', stock: 'In stock' }, { name: 'Ceramic Pour Over', detail: 'Hand-thrown stoneware', price: '$46', stock: 'In stock' }, { name: 'Scented Candle No. 04', detail: 'Cedar & fig, 220g', price: '$28', stock: 'Low stock' }], faqs: [{ name: 'Do you ship internationally?', detail: 'Yes, we ship to 24 countries.' }, { name: 'What is your return policy?', detail: '30 days, unused and in original packaging.' }, { name: 'Can I visit the studio?', detail: 'Our studio is open Monday to Saturday.' }], conversations: [{ initials: 'JS', name: 'Jordan S.', question: 'Do you have the blue ceramic vase in stock?', time: '8 min ago', tag: 'lead' }, { initials: 'AM', name: 'Alex M.', question: 'How long does shipping take to London?', time: '42 min ago', tag: 'resolved' }, { initials: 'KC', name: 'Kai C.', question: 'Can I pick up my order from the studio?', time: '2 hrs ago', tag: 'resolved' }, { initials: 'RD', name: 'Rhea D.', question: 'Are your candles made with soy wax?', time: 'Yesterday', tag: 'resolved' }] };
-let state = JSON.parse(localStorage.getItem(storeKey) || 'null') || defaultState;
 const container = document.querySelector('#view-container');
 const breadcrumb = document.querySelector('#breadcrumb-title');
+const shell = document.querySelector('.app-shell');
+const store = {
+  user: null,
+  shop: null,
+  products: [],
+  faqs: [],
+  conversations: []
+};
 const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, embed: renderEmbed, settings: renderSettings };
-function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); }
-function render(view = 'overview'){ document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === view)); breadcrumb.textContent = view[0].toUpperCase() + view.slice(1); container.innerHTML = views[view](); bindView(view); }
-function renderOverview(){ return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Thursday, August 20, 2026</div><h1>Good morning, Amara<span class="brand-dot">.</span></h1><p class="page-subtitle">Here’s what your assistant has been up to while you’ve been away.</p></div><button class="primary-button" data-view="embed">↗ &nbsp;Install on your site</button></div><div class="metrics"><div class="metric"><div class="metric-top"><span>Total conversations</span><span class="metric-icon">▤</span></div><div class="metric-value">248</div><div class="metric-trend up">↑ 18.4% <span class="panel-meta">vs last month</span></div></div><div class="metric"><div class="metric-top"><span>Answered by AI</span><span class="metric-icon">✦</span></div><div class="metric-value">91.6%</div><div class="metric-trend up">↑ 4.2% <span class="panel-meta">vs last month</span></div></div><div class="metric"><div class="metric-top"><span>Leads captured</span><span class="metric-icon">♧</span></div><div class="metric-value">32</div><div class="metric-trend up">↑ 12.5% <span class="panel-meta">vs last month</span></div></div><div class="metric"><div class="metric-top"><span>Needs your input</span><span class="metric-icon">!</span></div><div class="metric-value">7</div><div class="metric-trend down">↓ 2 <span class="panel-meta">since yesterday</span></div></div></div><div class="dashboard-grid"><div class="panel"><div class="panel-header"><span class="panel-title">Conversation volume</span><span class="panel-meta">Last 7 days · <b>248 chats</b></span></div><div class="chart"><svg viewBox="0 0 600 180" preserveAspectRatio="none"><defs><linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f18370" stop-opacity=".24"/><stop offset="1" stop-color="#f18370" stop-opacity="0"/></linearGradient></defs><path class="chart-grid" d="M0 20H600M0 65H600M0 110H600M0 155H600"/><path class="chart-area" d="M0 140C38 130 56 136 87 100S130 114 170 89S221 120 255 82S296 93 342 70S382 100 420 56S473 82 508 42S566 50 600 19V180H0Z"/><path class="chart-line" d="M0 140C38 130 56 136 87 100S130 114 170 89S221 120 255 82S296 93 342 70S382 100 420 56S473 82 508 42S566 50 600 19"/><circle class="chart-dot" cx="420" cy="56" r="4"/><circle class="chart-dot" cx="508" cy="42" r="4"/><text class="chart-label" x="0" y="175">14 Aug</text><text class="chart-label" x="98" y="175">15 Aug</text><text class="chart-label" x="198" y="175">16 Aug</text><text class="chart-label" x="298" y="175">17 Aug</text><text class="chart-label" x="398" y="175">18 Aug</text><text class="chart-label" x="498" y="175">19 Aug</text><text class="chart-label" x="570" y="175">Today</text></svg></div></div><div class="panel"><div class="panel-header"><span class="panel-title">Recent conversations</span><button class="text-button" data-view="conversations">View all →</button></div>${state.conversations.slice(0,4).map(conversationTemplate).join('')}</div></div></section>`; }
-function conversationTemplate(item){ return `<div class="conversation-row"><span class="conversation-avatar">${item.initials}</span><div class="conversation-copy"><strong>${item.question}</strong><small>${item.name}</small></div><span class="tag ${item.tag}">${item.tag === 'lead' ? 'Lead' : 'Resolved'}</span><span class="conversation-time">${item.time}</span></div>`; }
-function renderConversations(){ return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Inbox</div><h1>Conversations</h1><p class="page-subtitle">A pulse on every question your customers ask.</p></div><button class="secondary-button">⇩ &nbsp;Export CSV</button></div><div class="view-toolbar"><input class="search" id="conversation-search" placeholder="⌕  Search conversations"/><select class="filter"><option>All conversations</option><option>Leads only</option><option>Needs input</option></select><span class="panel-meta" style="margin-left:auto">248 total</span></div><div class="panel conversation-list" id="conversation-list">${state.conversations.concat(state.conversations).map(conversationTemplate).join('')}</div></section>`; }
-function renderKnowledge(){ return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Your assistant knows</div><h1>Knowledge base</h1><p class="page-subtitle">Keep answers accurate by giving your assistant the latest context.</p></div><button class="primary-button" id="add-knowledge">+ &nbsp;Add knowledge</button></div><div class="knowledge-grid"><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Products & services</h3><p>${state.products.length} items · Updated just now</p></div><span class="metric-icon" style="background:var(--yellow)">▦</span></div><div class="data-list">${state.products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${item.name[0]}</span><div class="data-row-copy"><strong>${item.name}</strong><small>${item.detail} · ${item.price}</small></div><small class="tag ${item.stock === 'Low stock' ? 'lead' : 'resolved'}">${item.stock}</small><button class="edit-link">Edit</button></div>`).join('')}</div><div class="add-row" data-add="product">+ Add product or service</div></div><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Frequently asked questions</h3><p>${state.faqs.length} answers · Updated yesterday</p></div><span class="metric-icon" style="background:var(--mint)">?</span></div><div class="data-list">${state.faqs.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">?</span><div class="data-row-copy"><strong>${item.name}</strong><small>${item.detail}</small></div><button class="edit-link">Edit</button></div>`).join('')}</div><div class="add-row" data-add="faq">+ Add FAQ</div></div></div></section>`; }
-function renderEmbed(){ return `<section class="page"><div class="page-heading"><div><div class="eyebrow">One line to go live</div><h1>Install your assistant</h1><p class="page-subtitle">Paste this snippet before the closing body tag on your website.</p></div><span class="status-pill"><i></i> Ready to install</span></div><div class="embed-layout"><div><div class="panel"><div class="panel-header"><span class="panel-title">Your embed code</span><button class="text-button" id="copy-code">Copy code ↗</button></div><pre class="code-box">&lt;<span class="code-key">script</span>
-  <span class="code-key">src</span>=<span class="code-string">"https://cdn.shopmate.ai/widget.js"</span>
-  <span class="code-key">data-shop-id</span>=<span class="code-string">"maison-miro-84d2"</span>
-  <span class="code-key">defer</span>
-&gt;&lt;/<span class="code-key">script</span>&gt;</pre></div><ol class="install-steps"><li><span class="step-number">1</span><div><strong>Copy the snippet</strong><p>Use the button above to copy your shop’s unique widget code.</p></div></li><li><span class="step-number">2</span><div><strong>Paste it into your site</strong><p>Add it before <code>&lt;/body&gt;</code> in your website editor.</p></div></li><li><span class="step-number">3</span><div><strong>Ask a question</strong><p>Visit your site and send a message to make sure everything is working.</p></div></li></ol></div><div class="preview-shell"><div class="preview-browser"><div class="browser-top"><i class="browser-dot"></i><i class="browser-dot"></i><i class="browser-dot"></i></div><div class="fake-site"><span></span><span></span><span></span></div><div class="widget-preview"><div class="widget-preview-head"><i></i> Maison Miro <span style="margin-left:auto">×</span></div><div class="widget-preview-msg">Hi there! How can I help you today?</div><div class="widget-preview-input">Ask anything...</div></div></div></div></div></section>`; }
-function renderSettings(){ return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Workspace preferences</div><h1>Settings</h1><p class="page-subtitle">Shape how Maison Miro appears to your visitors.</p></div><button class="primary-button" id="save-settings">Save changes</button></div><div class="setting-section"><div class="form-row"><div class="field"><label for="shop-name">Shop name</label><input id="shop-name" value="${state.shop.name}"></div><div class="field"><label for="category">Category</label><select id="category"><option>${state.shop.category}</option><option>Fashion & apparel</option><option>Food & beverage</option><option>Services</option></select></div></div><div class="field"><label for="description">Short description</label><textarea id="description">${state.shop.description}</textarea></div><div class="form-row"><div class="field"><label for="hours">Business hours</label><input id="hours" value="${state.shop.hours}"></div><div class="field"><label for="contact">Contact email</label><input id="contact" value="${state.shop.contact}"></div></div><div class="switch-row"><div><strong style="font-size:11px">Assistant is live</strong><p class="panel-meta">Visitors can chat with your assistant on your website.</p></div><button class="switch" aria-label="Assistant is live"></button></div></div></section>`; }
-function bindView(view){ document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => render(button.dataset.view))); if(view === 'conversations'){ document.querySelector('#conversation-search').addEventListener('input', event => { const term = event.target.value.toLowerCase(); document.querySelector('#conversation-list').innerHTML = state.conversations.concat(state.conversations).filter(item => item.question.toLowerCase().includes(term) || item.name.toLowerCase().includes(term)).map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No conversations match that search.</span></div>'; }); } if(view === 'embed') document.querySelector('#copy-code').addEventListener('click', () => { navigator.clipboard?.writeText('<script src="https://cdn.shopmate.ai/widget.js" data-shop-id="maison-miro-84d2" defer></script>'); showToast('Embed code copied to clipboard'); }); if(view === 'knowledge'){ document.querySelector('#add-knowledge').addEventListener('click', () => showToast('Choose Product or FAQ below to add knowledge')); document.querySelectorAll('.add-row').forEach(button => button.addEventListener('click', () => showToast(`${button.dataset.add === 'product' ? 'Product' : 'FAQ'} editor is ready for your Supabase connection`))); } if(view === 'settings') document.querySelector('#save-settings').addEventListener('click', () => { state.shop.name = document.querySelector('#shop-name').value; state.shop.category = document.querySelector('#category').value; state.shop.description = document.querySelector('#description').value; state.shop.hours = document.querySelector('#hours').value; state.shop.contact = document.querySelector('#contact').value; save(); document.querySelector('.shop-switcher strong').textContent = state.shop.name; showToast('Workspace settings saved'); }); }
-function showToast(message){ const toast = document.querySelector('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2600); }
-document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => render(item.dataset.view))); render();
+
+function configured() {
+  return window.shopmateSupabase && !window.supabaseConfigMissing;
+}
+
+function showToast(message) {
+  const toast = document.querySelector('#toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+}
+
+function renderAuth(message = '') {
+  shell.style.display = 'none';
+  document.body.insertAdjacentHTML('afterbegin', `<main class="auth-screen"><div class="auth-card"><a class="brand" href="#"><span class="brand-mark">✦</span><span>shopmate<span class="brand-dot">.</span>ai</span></a><div class="eyebrow">Owner workspace</div><h1>Turn questions into customers<span class="brand-dot">.</span></h1><p>Connect your shop knowledge and let your assistant handle the first hello.</p><button class="primary-button" id="google-login"><span>G</span> Continue with Google</button>${message ? `<div class="auth-error">${escapeHtml(message)}</div>` : ''}<small>Powered by Supabase Auth</small></div></main>`);
+  document.querySelector('#google-login').addEventListener('click', async () => {
+    if (!configured()) {
+      showToast('Add your Supabase URL and key in supabase.js first');
+      return;
+    }
+    const { error } = await window.shopmateSupabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    if (error) showToast(error.message);
+  });
+}
+
+async function loadData() {
+  const { data: sessionData, error: sessionError } = await window.shopmateSupabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  store.user = sessionData.session?.user || null;
+  if (!store.user) return false;
+  const { data: shop, error: shopError } = await window.shopmateSupabase.from('shops').select('*').eq('owner_id', store.user.id).maybeSingle();
+  if (shopError) throw shopError;
+  if (!shop) {
+    const { data: createdShop, error: createError } = await window.shopmateSupabase.from('shops').insert({ owner_id: store.user.id, name: store.user.user_metadata?.full_name || 'My Shop', category: 'Other' }).select().single();
+    if (createError) throw createError;
+    store.shop = createdShop;
+  } else {
+    store.shop = shop;
+  }
+  const [productsResult, faqsResult, sessionsResult] = await Promise.all([
+    window.shopmateSupabase.from('products').select('*').eq('shop_id', store.shop.id).order('created_at', { ascending: false }),
+    window.shopmateSupabase.from('faqs').select('*').eq('shop_id', store.shop.id).order('created_at', { ascending: false }),
+    window.shopmateSupabase.from('chat_sessions').select('*').eq('shop_id', store.shop.id).order('started_at', { ascending: false }).limit(50)
+  ]);
+  if (productsResult.error) throw productsResult.error;
+  if (faqsResult.error) throw faqsResult.error;
+  if (sessionsResult.error) throw sessionsResult.error;
+  store.products = productsResult.data || [];
+  store.faqs = faqsResult.data || [];
+  store.conversations = sessionsResult.data || [];
+  return true;
+}
+
+function updateSidebar() {
+  document.querySelector('.shop-switcher strong').textContent = store.shop.name;
+  document.querySelector('.breadcrumbs span').textContent = store.shop.name;
+  document.querySelector('.user-row strong').textContent = store.user.user_metadata?.full_name || store.user.email || 'Owner';
+  document.querySelector('.user-row small').textContent = store.user.email || 'Owner';
+  document.querySelector('.user-row .user-avatar').textContent = (store.user.user_metadata?.full_name || 'OW').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function render(view = 'overview') {
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === view));
+  breadcrumb.textContent = view[0].toUpperCase() + view.slice(1);
+  container.innerHTML = views[view]();
+  bindView(view);
+}
+
+function metric(label, value, icon, trend, tone = 'up') {
+  return `<div class="metric"><div class="metric-top"><span>${label}</span><span class="metric-icon">${icon}</span></div><div class="metric-value">${value}</div><div class="metric-trend ${tone}">${trend}</div></div>`;
+}
+
+function renderOverview() {
+  const total = store.conversations.length;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Live workspace</div><h1>Good morning<span class="brand-dot">.</span></h1><p class="page-subtitle">Your assistant is connected to your Supabase shop data.</p></div><button class="primary-button" data-view="knowledge">+ &nbsp;Add knowledge</button></div><div class="metrics">${metric('Total conversations', total, '▤', `${total ? 'Live data' : 'No chats yet'}`)}${metric('Products known', store.products.length, '▦', 'From your catalog')}${metric('FAQs ready', store.faqs.length, '?', 'Grounding answers')}${metric('Assistant status', 'Live', '✦', 'Supabase connected')}</div><div class="dashboard-grid"><div class="panel"><div class="panel-header"><span class="panel-title">Your knowledge at a glance</span><span class="panel-meta">Live from Supabase</span></div><div class="data-list"><div class="data-row"><span class="metric-icon" style="background:var(--yellow)">▦</span><div class="data-row-copy"><strong>Products & services</strong><small>${store.products.length} items available to the assistant</small></div><button class="edit-link" data-view="knowledge">Manage</button></div><div class="data-row"><span class="metric-icon" style="background:var(--mint)">?</span><div class="data-row-copy"><strong>Frequently asked questions</strong><small>${store.faqs.length} answers available</small></div><button class="edit-link" data-view="knowledge">Manage</button></div></div></div><div class="panel"><div class="panel-header"><span class="panel-title">Recent conversations</span><button class="text-button" data-view="conversations">View all →</button></div>${store.conversations.slice(0, 4).map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No customer conversations yet.</span></div>'}</div></div></section>`;
+}
+
+function conversationTemplate(item) {
+  const initials = (item.visitor_email || 'Visitor').slice(0, 2).toUpperCase();
+  return `<div class="conversation-row"><span class="conversation-avatar">${initials}</span><div class="conversation-copy"><strong>${escapeHtml(item.visitor_email || 'Anonymous visitor')}</strong><small>${item.is_lead ? 'Lead captured' : 'Visitor session'}</small></div><span class="tag ${item.is_lead ? 'lead' : 'resolved'}">${item.is_lead ? 'Lead' : 'Open'}</span><span class="conversation-time">${new Date(item.started_at).toLocaleDateString()}</span></div>`;
+}
+
+function renderConversations() {
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Live inbox</div><h1>Conversations</h1><p class="page-subtitle">Sessions are loaded from your Supabase database.</p></div></div><div class="view-toolbar"><input class="search" id="conversation-search" placeholder="⌕  Search by email"/><span class="panel-meta" style="margin-left:auto">${store.conversations.length} total</span></div><div class="panel conversation-list" id="conversation-list">${store.conversations.map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No conversations yet.</span></div>'}</div></section>`;
+}
+
+function renderKnowledge() {
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Your assistant knows</div><h1>Knowledge base</h1><p class="page-subtitle">Changes here are saved directly to Supabase.</p></div><button class="primary-button" id="add-knowledge">+ &nbsp;Add knowledge</button></div><div class="knowledge-grid"><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Products & services</h3><p>${store.products.length} items · Live data</p></div><span class="metric-icon" style="background:var(--yellow)">▦</span></div><div class="data-list">${store.products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${escapeHtml(item.name[0])}</span><div class="data-row-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description || '')} · ${item.price ?? 'No price'}</small></div><small class="tag ${item.in_stock ? 'resolved' : 'lead'}">${item.in_stock ? 'In stock' : 'Out of stock'}</small></div>`).join('') || '<div class="data-row"><span class="panel-meta">No products yet.</span></div>'}</div><div class="add-row" data-add="product">+ Add product or service</div></div><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Frequently asked questions</h3><p>${store.faqs.length} answers · Live data</p></div><span class="metric-icon" style="background:var(--mint)">?</span></div><div class="data-list">${store.faqs.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">?</span><div class="data-row-copy"><strong>${escapeHtml(item.question)}</strong><small>${escapeHtml(item.answer)}</small></div></div>`).join('') || '<div class="data-row"><span class="panel-meta">No FAQs yet.</span></div>'}</div><div class="add-row" data-add="faq">+ Add FAQ</div></div></div></section>`;
+}
+
+function renderEmbed() {
+  const snippet = `<script src="${window.location.origin}/widget.js" data-shop-id="${store.shop.id}" defer></script>`;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">One line to go live</div><h1>Install your assistant</h1><p class="page-subtitle">Use this shop-specific snippet on your website.</p></div><span class="status-pill"><i></i> Ready to install</span></div><div class="embed-layout"><div><div class="panel"><div class="panel-header"><span class="panel-title">Your embed code</span><button class="text-button" id="copy-code">Copy code ↗</button></div><pre class="code-box">${escapeHtml(snippet)}</pre></div><ol class="install-steps"><li><span class="step-number">1</span><div><strong>Copy the snippet</strong><p>Use the button above to copy your unique widget code.</p></div></li><li><span class="step-number">2</span><div><strong>Paste it into your site</strong><p>Add it before the closing body tag.</p></div></li><li><span class="step-number">3</span><div><strong>Ask a question</strong><p>Visitors can now reach your assistant.</p></div></li></ol></div><div class="preview-shell"><div class="preview-browser"><div class="browser-top"><i class="browser-dot"></i><i class="browser-dot"></i><i class="browser-dot"></i></div><div class="fake-site"><span></span><span></span><span></span></div><div class="widget-preview"><div class="widget-preview-head"><i></i> ${escapeHtml(store.shop.name)} <span style="margin-left:auto">×</span></div><div class="widget-preview-msg">Hi there! How can I help you today?</div><div class="widget-preview-input">Ask anything...</div></div></div></div></div></section>`;
+}
+
+function renderSettings() {
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Workspace preferences</div><h1>Settings</h1><p class="page-subtitle">Save changes directly to your shop record.</p></div><button class="primary-button" id="save-settings">Save changes</button></div><div class="setting-section"><div class="form-row"><div class="field"><label for="shop-name">Shop name</label><input id="shop-name" value="${escapeHtml(store.shop.name)}"></div><div class="field"><label for="category">Category</label><input id="category" value="${escapeHtml(store.shop.category || '')}"></div></div><div class="field"><label for="description">Short description</label><textarea id="description">${escapeHtml(store.shop.description || '')}</textarea></div><div class="form-row"><div class="field"><label for="hours">Business hours</label><input id="hours" value="${escapeHtml(store.shop.hours || '')}"></div><div class="field"><label for="contact">Contact email</label><input id="contact" value="${escapeHtml(store.shop.contact || '')}"></div></div></div></section>`;
+}
+
+async function addProduct() {
+  const name = prompt('Product name:');
+  if (!name) return;
+  const description = prompt('Short description:') || '';
+  const price = prompt('Price, for example 38:') || null;
+  const { error } = await window.shopmateSupabase.from('products').insert({ shop_id: store.shop.id, name, description, price: price ? Number(price) : null, in_stock: true });
+  if (error) return showToast(error.message);
+  await loadData(); render('knowledge'); showToast('Product saved');
+}
+
+async function addFaq() {
+  const question = prompt('Customer question:');
+  if (!question) return;
+  const answer = prompt('Answer:') || '';
+  const { error } = await window.shopmateSupabase.from('faqs').insert({ shop_id: store.shop.id, question, answer });
+  if (error) return showToast(error.message);
+  await loadData(); render('knowledge'); showToast('FAQ saved');
+}
+
+function bindView(view) {
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => render(button.dataset.view)));
+  if (view === 'conversations') document.querySelector('#conversation-search').addEventListener('input', event => { const term = event.target.value.toLowerCase(); document.querySelector('#conversation-list').innerHTML = store.conversations.filter(item => (item.visitor_email || 'Anonymous visitor').toLowerCase().includes(term)).map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No conversations match that search.</span></div>'; });
+  if (view === 'embed') document.querySelector('#copy-code').addEventListener('click', async () => { const snippet = `<script src="${window.location.origin}/widget.js" data-shop-id="${store.shop.id}" defer></script>`; await navigator.clipboard?.writeText(snippet); showToast('Embed code copied'); });
+  if (view === 'knowledge') { document.querySelector('#add-knowledge').addEventListener('click', () => showToast('Choose Product or FAQ below')); document.querySelector('[data-add="product"]').addEventListener('click', addProduct); document.querySelector('[data-add="faq"]').addEventListener('click', addFaq); }
+  if (view === 'settings') document.querySelector('#save-settings').addEventListener('click', saveSettings);
+}
+
+async function saveSettings() {
+  const payload = { name: document.querySelector('#shop-name').value.trim(), category: document.querySelector('#category').value.trim(), description: document.querySelector('#description').value.trim(), hours: document.querySelector('#hours').value.trim(), contact: document.querySelector('#contact').value.trim() };
+  const { data, error } = await window.shopmateSupabase.from('shops').update(payload).eq('id', store.shop.id).select().single();
+  if (error) return showToast(error.message);
+  store.shop = data;
+  updateSidebar();
+  showToast('Settings saved to Supabase');
+}
+
+async function start() {
+  if (!configured()) return renderAuth('Supabase client is not configured.');
+  try {
+    const authenticated = await loadData();
+    if (!authenticated) return renderAuth();
+    document.querySelector('.auth-screen')?.remove();
+    shell.style.display = 'flex';
+    updateSidebar();
+    render();
+    document.querySelector('.user-row .icon-button').addEventListener('click', () => window.shopmateSupabase.auth.signOut());
+    window.shopmateSupabase.auth.onAuthStateChange((_event, session) => { if (!session) window.location.reload(); });
+  } catch (error) {
+    renderAuth(error.message);
+  }
+}
+
+start();
