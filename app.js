@@ -7,9 +7,11 @@ const store = {
   products: [],
   faqs: [],
   conversations: [],
+  orders: [],
+  invoices: [],
   demo: false
 };
-const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, embed: renderEmbed, settings: renderSettings };
+const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, inventory: renderInventory, orders: renderOrders, billing: renderBilling, embed: renderEmbed, settings: renderSettings };
 
 function configured() {
   return window.shopmateSupabase && !window.supabaseConfigMissing;
@@ -159,6 +161,21 @@ function renderKnowledge() {
   return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Your assistant knows</div><h1>Knowledge base</h1><p class="page-subtitle">Changes here are saved directly to Supabase.</p></div><button class="primary-button" id="add-knowledge">+ &nbsp;Add knowledge</button></div><div class="knowledge-grid"><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Products & services</h3><p>${store.products.length} items · Live data</p></div><span class="metric-icon" style="background:var(--yellow)">▦</span></div><div class="data-list">${store.products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${escapeHtml(item.name[0])}</span><div class="data-row-copy"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description || '')} · ${item.price ?? 'No price'}</small></div><small class="tag ${item.in_stock ? 'resolved' : 'lead'}">${item.in_stock ? 'In stock' : 'Out of stock'}</small></div>`).join('') || '<div class="data-row"><span class="panel-meta">No products yet.</span></div>'}</div><div class="add-row" data-add="product">+ Add product or service</div></div><div class="knowledge-card"><div class="knowledge-card-header"><div><h3>Frequently asked questions</h3><p>${store.faqs.length} answers · Live data</p></div><span class="metric-icon" style="background:var(--mint)">?</span></div><div class="data-list">${store.faqs.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">?</span><div class="data-row-copy"><strong>${escapeHtml(item.question)}</strong><small>${escapeHtml(item.answer)}</small></div></div>`).join('') || '<div class="data-row"><span class="panel-meta">No FAQs yet.</span></div>'}</div><div class="add-row" data-add="faq">+ Add FAQ</div></div></div></section>`;
 }
 
+function renderInventory() {
+  const products = store.products;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Stock control</div><h1>Inventory</h1><p class="page-subtitle">Track stock levels and product value from one place.</p></div><button class="primary-button" data-view="knowledge">+ &nbsp;Add product</button></div><div class="metrics">${metric('Total SKUs', products.length, '▥', 'Catalog items')}${metric('In stock', products.filter(item => item.in_stock).length, '✓', 'Available now')}${metric('Low stock', products.filter(item => Number(item.stock_quantity || 0) > 0 && Number(item.stock_quantity || 0) < 5).length, '!', 'Needs attention', 'down')}${metric('Stock value', `₹${products.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.stock_quantity || 0), 0).toLocaleString('en-IN')}`, '₹', 'At selling price')}</div><div class="panel inventory-table"><div class="panel-header"><span class="panel-title">Product inventory</span><span class="panel-meta">${products.length} SKUs</span></div><div class="data-list">${products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${escapeHtml(item.name[0])}</span><div class="data-row-copy"><strong>${escapeHtml(item.name)}</strong><small>SKU ${escapeHtml(item.sku || 'DEMO-' + item.id)} · ₹${Number(item.price || 0).toLocaleString('en-IN')}</small></div><span class="stock-number">${Number(item.stock_quantity ?? 0)} units</span><span class="tag ${item.in_stock ? 'resolved' : 'lead'}">${item.in_stock ? 'In stock' : 'Out of stock'}</span></div>`).join('') || '<div class="data-row"><span class="panel-meta">Add products from Knowledge base.</span></div>'}</div></div></section>`;
+}
+
+function renderOrders() {
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Sales desk</div><h1>Orders</h1><p class="page-subtitle">Review customer orders and create invoices from completed sales.</p></div><button class="primary-button" id="new-order">+ &nbsp;New order</button></div><div class="metrics">${metric('Total orders', store.orders.length, '◫', 'This workspace')}${metric('Pending', store.orders.filter(order => order.status === 'Pending').length, '…', 'Needs fulfilment')}${metric('Paid', store.orders.filter(order => order.status === 'Paid').length, '✓', 'Collected')}${metric('Revenue', `₹${store.orders.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString('en-IN')}`, '₹', 'Including GST')}</div><div class="panel conversation-list">${store.orders.map(order => `<div class="conversation-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">#</span><div class="conversation-copy"><strong>${escapeHtml(order.id)} · ${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.item)} · ${new Date(order.date).toLocaleDateString()}</small></div><span class="tag ${order.status === 'Paid' ? 'resolved' : 'lead'}">${escapeHtml(order.status)}</span><strong>₹${Number(order.total).toLocaleString('en-IN')}</strong><button class="edit-link" data-invoice-order="${escapeHtml(order.id)}">Invoice</button></div>`).join('') || '<div class="data-row"><span class="panel-meta">No orders yet. Click New order to add one.</span></div>'}</div></section>`;
+}
+
+function renderBilling() {
+  const subtotal = store.invoices.reduce((sum, invoice) => sum + invoice.subtotal, 0);
+  const gst = store.invoices.reduce((sum, invoice) => sum + invoice.gst, 0);
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">GST ready</div><h1>Billing & invoices</h1><p class="page-subtitle">Create printable GST invoices with CGST and SGST.</p></div><button class="primary-button" id="create-invoice">+ &nbsp;Create invoice</button></div><div class="metrics">${metric('Invoices', store.invoices.length, '▤', 'Generated')}${metric('Taxable value', `₹${subtotal.toLocaleString('en-IN')}`, '₹', 'Before GST')}${metric('GST collected', `₹${gst.toLocaleString('en-IN')}`, '%', '18% standard GST')}${metric('Total billed', `₹${(subtotal + gst).toLocaleString('en-IN')}`, '✓', 'Invoice total')}</div><div class="panel conversation-list"><div class="panel-header"><span class="panel-title">Recent invoices</span><span class="panel-meta">GSTIN can be added in Settings</span></div>${store.invoices.map(invoice => `<div class="conversation-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">₹</span><div class="conversation-copy"><strong>${escapeHtml(invoice.number)} · ${escapeHtml(invoice.customer)}</strong><small>${escapeHtml(invoice.item)} · ${new Date(invoice.date).toLocaleDateString()}</small></div><span class="tag resolved">GST ${invoice.gst_rate}%</span><strong>₹${(invoice.subtotal + invoice.gst).toLocaleString('en-IN')}</strong><button class="edit-link" data-print-invoice="${escapeHtml(invoice.number)}">Print / PDF</button></div>`).join('') || '<div class="data-row"><span class="panel-meta">No invoices yet. Create one to test billing.</span></div>'}</div></section>`;
+}
+
 function renderEmbed() {
   const snippet = `<script src="${window.location.origin}/widget.js" data-shop-id="${store.shop.id}" defer></script>`;
   return `<section class="page"><div class="page-heading"><div><div class="eyebrow">One line to go live</div><h1>Install your assistant</h1><p class="page-subtitle">Use this shop-specific snippet on your website.</p></div><span class="status-pill"><i></i> Ready to install</span></div><div class="embed-layout"><div><div class="panel"><div class="panel-header"><span class="panel-title">Your embed code</span><button class="text-button" id="copy-code">Copy code ↗</button></div><pre class="code-box">${escapeHtml(snippet)}</pre></div><ol class="install-steps"><li><span class="step-number">1</span><div><strong>Copy the snippet</strong><p>Use the button above to copy your unique widget code.</p></div></li><li><span class="step-number">2</span><div><strong>Paste it into your site</strong><p>Add it before the closing body tag.</p></div></li><li><span class="step-number">3</span><div><strong>Ask a question</strong><p>Visitors can now reach your assistant.</p></div></li></ol></div><div class="preview-shell"><div class="preview-browser"><div class="browser-top"><i class="browser-dot"></i><i class="browser-dot"></i><i class="browser-dot"></i></div><div class="fake-site"><span></span><span></span><span></span></div><div class="widget-preview"><div class="widget-preview-head"><i></i> ${escapeHtml(store.shop.name)} <span style="margin-left:auto">×</span></div><div class="widget-preview-msg">Hi there! How can I help you today?</div><div class="widget-preview-input">Ask anything...</div></div></div></div></div></section>`;
@@ -206,7 +223,57 @@ function bindView(view) {
   if (view === 'conversations') document.querySelector('#conversation-search').addEventListener('input', event => { const term = event.target.value.toLowerCase(); document.querySelector('#conversation-list').innerHTML = store.conversations.filter(item => (item.visitor_email || 'Anonymous visitor').toLowerCase().includes(term)).map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No conversations match that search.</span></div>'; });
   if (view === 'embed') document.querySelector('#copy-code').addEventListener('click', async () => { const snippet = `<script src="${window.location.origin}/widget.js" data-shop-id="${store.shop.id}" defer></script>`; await navigator.clipboard?.writeText(snippet); showToast('Embed code copied'); });
   if (view === 'knowledge') { document.querySelector('#add-knowledge').addEventListener('click', () => showToast('Choose Product or FAQ below')); document.querySelector('[data-add="product"]').addEventListener('click', addProduct); document.querySelector('[data-add="faq"]').addEventListener('click', addFaq); }
+  if (view === 'orders') {
+    document.querySelector('#new-order').addEventListener('click', createOrder);
+    document.querySelectorAll('[data-invoice-order]').forEach(button => button.addEventListener('click', () => createInvoice(button.dataset.invoiceOrder)));
+  }
+  if (view === 'billing') {
+    document.querySelector('#create-invoice').addEventListener('click', () => createInvoice());
+    document.querySelectorAll('[data-print-invoice]').forEach(button => button.addEventListener('click', () => printInvoice(button.dataset.printInvoice)));
+  }
   if (view === 'settings') document.querySelector('#save-settings').addEventListener('click', saveSettings);
+}
+
+function createOrder() {
+  if (!store.demo) return showToast('Orders need the Supabase orders table connection');
+  const customer = prompt('Customer name:');
+  if (!customer) return;
+  const item = prompt('Product or service:') || 'Custom order';
+  const amount = Number(prompt('Amount before GST:') || 0);
+  const gst = amount * 0.18;
+  store.orders.unshift({ id: `ORD-${String(store.orders.length + 1).padStart(4, '0')}`, customer, item, total: amount + gst, status: 'Pending', date: new Date().toISOString() });
+  saveDemo();
+  render('orders');
+  showToast('Order created in demo mode');
+}
+
+function createInvoice(orderId) {
+  if (!store.demo) return showToast('Invoices need the Supabase invoices table connection');
+  const order = store.orders.find(item => item.id === orderId);
+  const customer = order?.customer || prompt('Customer name:');
+  if (!customer) return;
+  const item = order?.item || prompt('Product or service:') || 'Shop purchase';
+  const subtotal = order ? Number(order.total) / 1.18 : Number(prompt('Amount before GST:') || 0);
+  const gstRate = 18;
+  const invoice = { number: `INV-${String(store.invoices.length + 1).padStart(4, '0')}`, customer, item, subtotal: Math.round(subtotal), gst: Math.round(subtotal * gstRate / 100), gst_rate: gstRate, date: new Date().toISOString() };
+  store.invoices.unshift(invoice);
+  if (order) order.status = 'Paid';
+  saveDemo();
+  render('billing');
+  showToast('GST invoice created');
+}
+
+function printInvoice(number) {
+  const invoice = store.invoices.find(item => item.number === number);
+  if (!invoice) return;
+  const printWindow = window.open('', '_blank', 'width=800,height=700');
+  printWindow.document.write(`<html><head><title>${invoice.number} - ${escapeHtml(store.shop.name)}</title><style>body{font-family:Arial;padding:50px;color:#18231f}h1{margin-bottom:4px}small{color:#738079}.line{border-top:1px solid #ddd;margin:28px 0}.row{display:flex;justify-content:space-between;padding:9px 0}.total{font-size:20px;font-weight:bold;border-top:2px solid #18231f;margin-top:14px;padding-top:14px}</style></head><body><h1>${escapeHtml(store.shop.name)}</h1><small>GST INVOICE · ${escapeHtml(invoice.number)}</small><div class="line"></div><p><strong>Bill to:</strong> ${escapeHtml(invoice.customer)}</p><div class="row"><span>${escapeHtml(invoice.item)}</span><span>₹${invoice.subtotal.toLocaleString('en-IN')}</span></div><div class="row"><span>GST (${invoice.gst_rate}%)</span><span>₹${invoice.gst.toLocaleString('en-IN')}</span></div><div class="row total"><span>Total</span><span>₹${(invoice.subtotal + invoice.gst).toLocaleString('en-IN')}</span></div><p><small>Thank you for shopping with us.</small></p></body></html>`);
+  printWindow.document.close();
+  printWindow.print();
+}
+
+function saveDemo() {
+  localStorage.setItem('shopmate-demo-data', JSON.stringify({ ...store, demo: true }));
 }
 
 async function saveSettings() {
@@ -227,7 +294,9 @@ async function saveSettings() {
 
 function startDemo() {
   const saved = JSON.parse(localStorage.getItem('shopmate-demo-data') || 'null');
-  Object.assign(store, saved || { user: { email: 'demo@shopmate.ai', user_metadata: { full_name: 'Demo Owner' } }, shop: { id: 'demo-shop', name: 'Maison Miro', category: 'Home & living', description: 'Thoughtful objects for everyday rituals.', hours: 'Mon-Sat, 10:00-19:00', contact: 'hello@maisonmiro.com' }, products: [{ id: 'p1', name: 'Linen Table Runner', description: 'Natural flax, 180cm', price: 38, in_stock: true }], faqs: [{ id: 'f1', question: 'Do you ship internationally?', answer: 'Yes, we ship to 24 countries.' }], conversations: [], demo: true });
+  Object.assign(store, saved || { user: { email: 'demo@shopmate.ai', user_metadata: { full_name: 'Demo Owner' } }, shop: { id: 'demo-shop', name: 'Maison Miro', category: 'Home & living', description: 'Thoughtful objects for everyday rituals.', hours: 'Mon-Sat, 10:00-19:00', contact: 'hello@maisonmiro.com' }, products: [{ id: 'p1', name: 'Linen Table Runner', description: 'Natural flax, 180cm', price: 38, stock_quantity: 12, in_stock: true }], faqs: [{ id: 'f1', question: 'Do you ship internationally?', answer: 'Yes, we ship to 24 countries.' }], conversations: [], orders: [], invoices: [], demo: true });
+  store.orders ||= [];
+  store.invoices ||= [];
   store.demo = true;
   document.querySelector('.auth-screen')?.remove();
   shell.style.display = 'flex';
