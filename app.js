@@ -163,7 +163,11 @@ function renderKnowledge() {
 
 function renderInventory() {
   const products = store.products;
-  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Stock control</div><h1>Inventory</h1><p class="page-subtitle">Track stock levels and product value from one place.</p></div><button class="primary-button" data-view="knowledge">+ &nbsp;Add product</button></div><div class="metrics">${metric('Total SKUs', products.length, '▥', 'Catalog items')}${metric('In stock', products.filter(item => item.in_stock).length, '✓', 'Available now')}${metric('Low stock', products.filter(item => Number(item.stock_quantity || 0) > 0 && Number(item.stock_quantity || 0) < 5).length, '!', 'Needs attention', 'down')}${metric('Stock value', `₹${products.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.stock_quantity || 0), 0).toLocaleString('en-IN')}`, '₹', 'At selling price')}</div><div class="panel inventory-table"><div class="panel-header"><span class="panel-title">Product inventory</span><span class="panel-meta">${products.length} SKUs</span></div><div class="data-list">${products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${escapeHtml(item.name[0])}</span><div class="data-row-copy"><strong>${escapeHtml(item.name)}</strong><small>SKU ${escapeHtml(item.sku || 'DEMO-' + item.id)} · ₹${Number(item.price || 0).toLocaleString('en-IN')}</small></div><span class="stock-number">${Number(item.stock_quantity ?? 0)} units</span><span class="tag ${item.in_stock ? 'resolved' : 'lead'}">${item.in_stock ? 'In stock' : 'Out of stock'}</span></div>`).join('') || '<div class="data-row"><span class="panel-meta">Add products from Knowledge base.</span></div>'}</div></div></section>`;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Stock control</div><h1>Inventory</h1><p class="page-subtitle">Track stock levels and product value from one place.</p></div><button class="primary-button" id="add-inventory-product">+ &nbsp;Add product</button></div><div class="metrics">${metric('Total SKUs', products.length, '▥', 'Catalog items')}${metric('In stock', products.filter(item => item.in_stock).length, '✓', 'Available now')}${metric('Low stock', products.filter(item => Number(item.stock_quantity || 0) > 0 && Number(item.stock_quantity || 0) < 5).length, '!', 'Needs attention', 'down')}${metric('Stock value', `₹${products.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.stock_quantity || 0), 0).toLocaleString('en-IN')}`, '₹', 'At selling price')}</div><div class="inventory-tabs"><button class="inventory-tab active" data-stock-filter="all">All products <b>${products.length}</b></button><button class="inventory-tab" data-stock-filter="in">In stock <b>${products.filter(item => item.in_stock).length}</b></button><button class="inventory-tab" data-stock-filter="out">Out of stock <b>${products.filter(item => !item.in_stock).length}</b></button></div><div class="panel inventory-table"><div class="panel-header"><span class="panel-title">Product inventory</span><span class="panel-meta" id="inventory-count">${products.length} SKUs</span></div><div class="data-list" id="inventory-list">${inventoryRows(products)}</div></div></section>`;
+}
+
+function inventoryRows(products) {
+  return products.map(item => `<div class="data-row"><span class="conversation-avatar" style="background:var(--yellow);color:#8a7320">${escapeHtml(item.name[0])}</span><div class="data-row-copy"><strong>${escapeHtml(item.name)}</strong><small>SKU ${escapeHtml(item.sku || 'DEMO-' + item.id)} · ₹${Number(item.price || 0).toLocaleString('en-IN')}</small></div><span class="stock-number">${Number(item.stock_quantity ?? 0)} units</span><span class="tag ${item.in_stock ? 'resolved' : 'lead'}">${item.in_stock ? 'In stock' : 'Out of stock'}</span></div>`).join('') || '<div class="data-row"><span class="panel-meta">No products in this section.</span></div>';
 }
 
 function renderOrders() {
@@ -185,21 +189,22 @@ function renderSettings() {
   return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Workspace preferences</div><h1>Settings</h1><p class="page-subtitle">Save changes directly to your shop record.</p></div><button class="primary-button" id="save-settings">Save changes</button></div><div class="setting-section"><div class="form-row"><div class="field"><label for="shop-name">Shop name</label><input id="shop-name" value="${escapeHtml(store.shop.name)}"></div><div class="field"><label for="category">Category</label><input id="category" value="${escapeHtml(store.shop.category || '')}"></div></div><div class="field"><label for="description">Short description</label><textarea id="description">${escapeHtml(store.shop.description || '')}</textarea></div><div class="form-row"><div class="field"><label for="hours">Business hours</label><input id="hours" value="${escapeHtml(store.shop.hours || '')}"></div><div class="field"><label for="contact">Contact email</label><input id="contact" value="${escapeHtml(store.shop.contact || '')}"></div></div></div></section>`;
 }
 
-async function addProduct() {
+async function addProduct(returnView = 'knowledge') {
   const name = prompt('Product name:');
   if (!name) return;
   const description = prompt('Short description:') || '';
   const price = prompt('Price, for example 38:') || null;
+  const stockQuantity = Math.max(0, Number(prompt('Stock quantity:') || 0));
   if (store.demo) {
-    store.products.unshift({ id: crypto.randomUUID(), name, description, price: price ? Number(price) : null, in_stock: true });
+    store.products.unshift({ id: crypto.randomUUID(), name, description, price: price ? Number(price) : null, stock_quantity: stockQuantity, in_stock: stockQuantity > 0 });
     localStorage.setItem('shopmate-demo-data', JSON.stringify(store));
-    render('knowledge');
+    render(returnView);
     showToast('Demo product saved locally');
     return;
   }
-  const { error } = await window.shopmateSupabase.from('products').insert({ shop_id: store.shop.id, name, description, price: price ? Number(price) : null, in_stock: true });
+  const { error } = await window.shopmateSupabase.from('products').insert({ shop_id: store.shop.id, name, description, price: price ? Number(price) : null, in_stock: stockQuantity > 0, stock_quantity: stockQuantity });
   if (error) return showToast(error.message);
-  await loadData(); render('knowledge'); showToast('Product saved');
+  await loadData(); render(returnView); showToast('Product saved');
 }
 
 async function addFaq() {
@@ -223,6 +228,16 @@ function bindView(view) {
   if (view === 'conversations') document.querySelector('#conversation-search').addEventListener('input', event => { const term = event.target.value.toLowerCase(); document.querySelector('#conversation-list').innerHTML = store.conversations.filter(item => (item.visitor_email || 'Anonymous visitor').toLowerCase().includes(term)).map(conversationTemplate).join('') || '<div class="data-row"><span class="panel-meta">No conversations match that search.</span></div>'; });
   if (view === 'embed') document.querySelector('#copy-code').addEventListener('click', async () => { const snippet = `<script src="${window.location.origin}/widget.js" data-shop-id="${store.shop.id}" defer></script>`; await navigator.clipboard?.writeText(snippet); showToast('Embed code copied'); });
   if (view === 'knowledge') { document.querySelector('#add-knowledge').addEventListener('click', () => showToast('Choose Product or FAQ below')); document.querySelector('[data-add="product"]').addEventListener('click', addProduct); document.querySelector('[data-add="faq"]').addEventListener('click', addFaq); }
+  if (view === 'inventory') {
+    document.querySelector('#add-inventory-product').addEventListener('click', () => addProduct('inventory'));
+    document.querySelectorAll('[data-stock-filter]').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('[data-stock-filter]').forEach(tab => tab.classList.toggle('active', tab === button));
+      const filter = button.dataset.stockFilter;
+      const filtered = filter === 'all' ? store.products : store.products.filter(item => filter === 'in' ? item.in_stock : !item.in_stock);
+      document.querySelector('#inventory-list').innerHTML = inventoryRows(filtered);
+      document.querySelector('#inventory-count').textContent = `${filtered.length} SKUs`;
+    }));
+  }
   if (view === 'orders') {
     document.querySelector('#new-order').addEventListener('click', createOrder);
     document.querySelectorAll('[data-invoice-order]').forEach(button => button.addEventListener('click', () => createInvoice(button.dataset.invoiceOrder)));
