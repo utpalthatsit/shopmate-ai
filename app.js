@@ -33,8 +33,20 @@ function renderAuth(message = '') {
       showToast('Add your Supabase URL and key in supabase.js first');
       return;
     }
-    const { error } = await window.shopmateSupabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-    if (error) showToast(error.message);
+    const button = document.querySelector('#google-login');
+    button.disabled = true;
+    button.textContent = 'Connecting to Google...';
+    const { data, error } = await window.shopmateSupabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/` } });
+    if (error) {
+      button.disabled = false;
+      button.innerHTML = '<span>G</span> Continue with Google';
+      const errorBox = document.querySelector('.auth-error') || document.createElement('div');
+      errorBox.className = 'auth-error';
+      errorBox.textContent = error.message;
+      button.after(errorBox);
+      return;
+    }
+    if (data?.url) window.location.assign(data.url);
   });
 }
 
