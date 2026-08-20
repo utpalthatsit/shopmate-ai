@@ -11,7 +11,7 @@ const store = {
   invoices: [],
   demo: false
 };
-const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, inventory: renderInventory, orders: renderOrders, billing: renderBilling, embed: renderEmbed, settings: renderSettings };
+const views = { overview: renderOverview, conversations: renderConversations, knowledge: renderKnowledge, inventory: renderInventory, orders: renderOrders, billing: renderBilling, marketing: renderMarketing, embed: renderEmbed, settings: renderSettings };
 
 function configured() {
   return window.shopmateSupabase && !window.supabaseConfigMissing;
@@ -171,7 +171,12 @@ function inventoryRows(products) {
 }
 
 function renderOrders() {
-  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Sales desk</div><h1>Orders</h1><p class="page-subtitle">Review customer orders and create invoices from completed sales.</p></div><button class="primary-button" id="new-order">+ &nbsp;New order</button></div><div class="metrics">${metric('Total orders', store.orders.length, '◫', 'This workspace')}${metric('Pending', store.orders.filter(order => order.status === 'Pending').length, '…', 'Needs fulfilment')}${metric('Paid', store.orders.filter(order => order.status === 'Paid').length, '✓', 'Collected')}${metric('Revenue', `₹${store.orders.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString('en-IN')}`, '₹', 'Including GST')}</div><div class="panel conversation-list">${store.orders.map(order => `<div class="conversation-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">#</span><div class="conversation-copy"><strong>${escapeHtml(order.id)} · ${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.item)} · ${new Date(order.date).toLocaleDateString()}</small></div><span class="tag ${order.status === 'Paid' ? 'resolved' : 'lead'}">${escapeHtml(order.status)}</span><strong>₹${Number(order.total).toLocaleString('en-IN')}</strong><button class="edit-link" data-invoice-order="${escapeHtml(order.id)}">Invoice</button></div>`).join('') || '<div class="data-row"><span class="panel-meta">No orders yet. Click New order to add one.</span></div>'}</div></section>`;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Sales desk</div><h1>Orders</h1><p class="page-subtitle">Review customer orders, confirm them, and create invoices.</p></div><button class="primary-button" id="new-order">+ &nbsp;New order</button></div><div class="metrics">${metric('Total orders', store.orders.length, '◫', 'This workspace')}${metric('Pending', store.orders.filter(order => order.status === 'Pending').length, '…', 'Needs confirmation')}${metric('Confirmed', store.orders.filter(order => order.status === 'Confirmed').length, '✓', 'Ready to fulfil')}${metric('Revenue', `₹${store.orders.reduce((sum, order) => sum + Number(order.total || 0), 0).toLocaleString('en-IN')}`, '₹', 'Including GST')}</div><div class="panel conversation-list">${store.orders.map(order => `<div class="conversation-row"><span class="conversation-avatar" style="background:var(--mint);color:var(--mint-strong)">#</span><div class="conversation-copy"><strong>${escapeHtml(order.id)} · ${escapeHtml(order.customer)}</strong><small>${escapeHtml(order.item)} · ${new Date(order.date).toLocaleDateString()}</small></div><span class="tag ${order.status === 'Confirmed' || order.status === 'Paid' ? 'resolved' : 'lead'}">${escapeHtml(order.status)}</span><strong>₹${Number(order.total).toLocaleString('en-IN')}</strong>${order.status === 'Pending' ? `<button class="edit-link" data-confirm-order="${escapeHtml(order.id)}">Confirm</button>` : ''}<button class="edit-link" data-invoice-order="${escapeHtml(order.id)}">Invoice</button></div>`).join('') || '<div class="data-row"><span class="panel-meta">No orders yet. Click New order to add one.</span></div>'}</div></section>`;
+}
+
+function renderMarketing() {
+  const shopLink = `${window.location.origin}/shop.html?shop=${encodeURIComponent(store.shop.id)}`;
+  return `<section class="page"><div class="page-heading"><div><div class="eyebrow">Bring customers in</div><h1>Share your shop</h1><p class="page-subtitle">Send this link to customers on WhatsApp, Instagram, or anywhere online.</p></div><button class="primary-button" id="share-shop">↗ &nbsp;Share link</button></div><div class="marketing-layout"><div class="panel share-panel"><div class="panel-header"><span class="panel-title">Your public shop link</span><span class="status-pill"><i></i> Live</span></div><div class="share-link-box"><input id="shop-link" readonly value="${escapeHtml(shopLink)}"><button class="secondary-button" id="copy-shop-link">Copy</button></div><div class="share-actions"><a class="share-action whatsapp" target="_blank" href="https://wa.me/?text=${encodeURIComponent(`Shop from ${store.shop.name}: ${shopLink}`)}">WhatsApp ↗</a><a class="share-action" target="_blank" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(`Shop from ${store.shop.name}`)}&url=${encodeURIComponent(shopLink)}">Share on X ↗</a></div></div><div class="panel marketing-card"><span class="metric-icon" style="background:var(--yellow)">✦</span><h3>Make your first sale</h3><p>Share the link with your customers. They can browse your inventory, choose a quantity, and send an order request directly to your dashboard.</p><button class="text-button" id="open-shop">Open public shop →</button></div></div></section>`;
 }
 
 function renderBilling() {
@@ -240,6 +245,7 @@ function bindView(view) {
   }
   if (view === 'orders') {
     document.querySelector('#new-order').addEventListener('click', createOrder);
+    document.querySelectorAll('[data-confirm-order]').forEach(button => button.addEventListener('click', () => confirmOrder(button.dataset.confirmOrder)));
     document.querySelectorAll('[data-invoice-order]').forEach(button => button.addEventListener('click', () => createInvoice(button.dataset.invoiceOrder)));
   }
   if (view === 'billing') {
@@ -247,6 +253,21 @@ function bindView(view) {
     document.querySelectorAll('[data-print-invoice]').forEach(button => button.addEventListener('click', () => printInvoice(button.dataset.printInvoice)));
   }
   if (view === 'settings') document.querySelector('#save-settings').addEventListener('click', saveSettings);
+  if (view === 'marketing') {
+    const shopLink = `${window.location.origin}/shop.html?shop=${encodeURIComponent(store.shop.id)}`;
+    document.querySelector('#copy-shop-link').addEventListener('click', async () => { await navigator.clipboard?.writeText(shopLink); showToast('Shop link copied'); });
+    document.querySelector('#share-shop').addEventListener('click', async () => { if (navigator.share) await navigator.share({ title: store.shop.name, text: `Shop from ${store.shop.name}`, url: shopLink }); else { await navigator.clipboard?.writeText(shopLink); showToast('Shop link copied'); } });
+    document.querySelector('#open-shop').addEventListener('click', () => window.open(shopLink, '_blank'));
+  }
+}
+
+function confirmOrder(orderId) {
+  const order = store.orders.find(item => item.id === orderId);
+  if (!order) return;
+  order.status = 'Confirmed';
+  saveDemo();
+  render('orders');
+  showToast(`${order.id} confirmed`);
 }
 
 function createOrder() {
